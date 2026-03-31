@@ -16,3 +16,4 @@ __MACOSX/
 # Output
 *.json
 !pyproject.toml
+!tests/fixtures/*.json

@@ -48,6 +48,7 @@ def run_discussion(
             on_event(event_type, data)
 
     # ── Phase 0: Topic analysis & persona design ──
+    emit("activity", {"who": "Facilitator", "what": "Analyzing topic and designing personas..."})
     analysis, in_tok, out_tok = analyze_topic(topic_text, attachment_paths)
 
     state = DiscussionState(
@@ -74,6 +75,7 @@ def run_discussion(
 
     while state.turn < max_turns and not state.is_converged:
         # Step 1: Facilitator decides next action
+        emit("activity", {"who": "Facilitator", "what": "Deciding next speaker..."})
         action, in_tok, out_tok = decide_next_action(state, max_turns)
         state.token_usage.add_flash(in_tok, out_tok)
         state.facilitator_actions.append(action)
@@ -101,6 +103,7 @@ def run_discussion(
             speaker_name = analysis.personas[0].name
 
         design = persona_map[speaker_name]
+        emit("activity", {"who": speaker_name, "what": f"Thinking... (Turn {state.turn + 1})"})
         response, in_tok, out_tok = generate_response(
             design=design,
             state=state,
@@ -193,6 +196,7 @@ def run_discussion(
 
     # Generate closing statements from each persona
     for persona in analysis.personas:
+        emit("activity", {"who": persona.name, "what": "Writing final statement..."})
         closing_instruction = (
             "The discussion is concluding. Give your FINAL STATEMENT: "
             "what you agree with, what you still disagree on, and your "
@@ -223,6 +227,7 @@ def run_discussion(
         })
 
     # ── Phase 3: Synthesis ──
+    emit("activity", {"who": "Facilitator", "what": "Writing synthesis report..."})
     report, in_tok, out_tok = synthesize_report(state)
     state.token_usage.add_pro(in_tok, out_tok)
 

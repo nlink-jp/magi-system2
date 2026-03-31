@@ -24,6 +24,7 @@ _clients: list[WebSocket] = []
 # Discussion state (shared across the app)
 _state: DiscussionState | None = None
 _discussion_config: dict[str, Any] = {}
+_event_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def _broadcast(event_type: str, data: dict) -> None:
@@ -37,15 +38,6 @@ async def _broadcast(event_type: str, data: dict) -> None:
             disconnected.append(ws)
     for ws in disconnected:
         _clients.remove(ws)
-
-
-def _sync_broadcast(event_type: str, data: dict) -> None:
-    """Synchronous wrapper for broadcast (called from discussion thread)."""
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.ensure_future(_broadcast(event_type, data))
-    else:
-        loop.run_until_complete(_broadcast(event_type, data))
 
 
 def create_app(
@@ -89,8 +81,10 @@ def create_app(
 
     @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket):
+        global _event_loop
         await ws.accept()
         _clients.append(ws)
+        _event_loop = asyncio.get_running_loop()
         log("WEB", f"Client connected ({len(_clients)} total)")
 
         try:
@@ -99,10 +93,8 @@ def create_app(
                 msg = json.loads(data)
 
                 if msg.get("action") == "start":
-                    # Run discussion in background thread
-                    asyncio.get_event_loop().run_in_executor(
-                        None, _run_discussion_thread
-                    )
+                    log("WEB", "Discussion start requested")
+                    _event_loop.run_in_executor(None, _run_discussion_thread)
                 elif msg.get("action") == "get_config":
                     await ws.send_text(json.dumps({
                         "type": "config",
@@ -136,11 +128,12 @@ def _run_discussion_thread() -> None:
 
     def on_event(event_type: str, data: dict) -> None:
         """Bridge discussion events to WebSocket broadcast."""
+        if _event_loop is None:
+            return
         try:
-            loop = asyncio.get_event_loop()
-            asyncio.run_coroutine_threadsafe(_broadcast(event_type, data), loop)
-        except Exception:
-            pass  # Event loop may not be available during shutdown
+            asyncio.run_coroutine_threadsafe(_broadcast(event_type, data), _event_loop)
+        except Exception as e:
+            log("ERR", f"Broadcast failed: {e}", level="warn")
 
     _state = run_discussion(
         topic_text=config["topic_text"],

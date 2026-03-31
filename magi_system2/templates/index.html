@@ -14,6 +14,7 @@
     <div class="controls">
       <label><input type="checkbox" id="toggle-thoughts"> Show Thoughts</label>
       <label><input type="checkbox" id="toggle-facilitator"> Show Facilitator</label>
+      <button class="btn-theme" id="btn-theme" title="Toggle theme">☀</button>
       <button class="btn" id="btn-start">Start Discussion</button>
     </div>
   </div>
@@ -31,6 +32,13 @@
   <div class="sidebar" id="sidebar">
     <!-- Populated dynamically -->
   </div>
+</div>
+
+<!-- Activity indicator -->
+<div class="activity-bar" id="activity-bar" style="display:none;">
+  <div class="activity-spinner"></div>
+  <span class="activity-who" id="activity-who"></span>
+  <span class="activity-what" id="activity-what"></span>
 </div>
 
 <!-- Convergence bar -->
@@ -54,6 +62,9 @@
   var sidebar = document.getElementById('sidebar');
   var emptyState = document.getElementById('empty-state');
   var statusEl = document.getElementById('status');
+  var activityBar = document.getElementById('activity-bar');
+  var activityWho = document.getElementById('activity-who');
+  var activityWhat = document.getElementById('activity-what');
   var convFill = document.getElementById('convergence-fill');
   var convValue = document.getElementById('convergence-value');
   var phaseLabel = document.getElementById('phase-label');
@@ -72,6 +83,23 @@
       el.style.display = showFacilitator ? 'block' : 'none';
     });
   });
+
+  document.getElementById('btn-theme').addEventListener('click', function() {
+    var el = document.documentElement;
+    var current = el.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    if (!current) next = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark';
+    el.setAttribute('data-theme', next);
+    localStorage.setItem('magi2-theme', next);
+    this.textContent = next === 'dark' ? '☀' : '☽';
+  });
+  (function() {
+    var saved = localStorage.getItem('magi2-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('btn-theme').textContent = saved === 'dark' ? '☀' : '☽';
+    }
+  })();
 
   document.getElementById('btn-start').addEventListener('click', function() {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -104,8 +132,25 @@
     };
   }
 
+  function showActivity(who, what) {
+    activityWho.textContent = who;
+    activityWhat.textContent = what;
+    activityBar.style.display = 'flex';
+  }
+
+  function hideActivity() {
+    activityBar.style.display = 'none';
+  }
+
   function handleEvent(type, data) {
+    // Hide activity on any result event
+    if (type !== 'activity') hideActivity();
+
     switch(type) {
+      case 'activity':
+        showActivity(data.who, data.what);
+        break;
+
       case 'config':
         statusEl.textContent = 'Ready — ' + data.topic.substring(0, 60) + '...';
         break;
@@ -160,6 +205,30 @@
     timeline.scrollTop = timeline.scrollHeight;
   }
 
+  // Simple Markdown to HTML (XSS-safe: escapes first, then applies formatting)
+  function renderMd(text) {
+    if (!text) return '';
+    // Escape HTML entities
+    var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // Headings: ### → h4, ## → h3
+    safe = safe.replace(/^### (.+)$/gm, '<strong>$1</strong>');
+    safe = safe.replace(/^## (.+)$/gm, '<h4 style="margin:8px 0 4px;">$1</h4>');
+    // Bold: **text**
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text*
+    safe = safe.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    // Unordered lists: - item
+    safe = safe.replace(/^- (.+)$/gm, '<li>$1</li>');
+    safe = safe.replace(/(<li>.*<\/li>\n?)+/g, function(m) { return '<ul>' + m + '</ul>'; });
+    // Numbered lists: 1. item
+    safe = safe.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    // Paragraphs: double newline
+    safe = safe.replace(/\n\n/g, '</p><p>');
+    // Single newlines: br
+    safe = safe.replace(/\n/g, '<br>');
+    return '<p>' + safe + '</p>';
+  }
+
   function addTimelineCard(role, title, content) {
     var card = document.createElement('div');
     card.className = 'card card-' + role;
@@ -169,7 +238,7 @@
     card.appendChild(h);
     var body = document.createElement('div');
     body.className = 'card-body';
-    body.textContent = content;
+    body.innerHTML = renderMd(content);
     card.appendChild(body);
     timeline.appendChild(card);
   }
@@ -188,13 +257,13 @@
       var thought = document.createElement('div');
       thought.className = 'thought-bubble';
       thought.style.display = showThoughts ? 'block' : 'none';
-      thought.textContent = data.inner_thoughts.honest_reaction;
+      thought.innerHTML = renderMd(data.inner_thoughts.honest_reaction);
       card.appendChild(thought);
     }
 
     var body = document.createElement('div');
     body.className = 'card-body';
-    body.textContent = data.statement;
+    body.innerHTML = renderMd(data.statement);
     card.appendChild(body);
 
     if (data.key_points && data.key_points.length > 0) {

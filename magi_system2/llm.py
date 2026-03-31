@@ -68,6 +68,9 @@ def generate_structured(
                     response_mime_type="application/json",
                     response_schema=response_schema,
                     temperature=temperature,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_budget=4096,
+                    ),
                 ),
             )
 
@@ -112,6 +115,9 @@ def generate_text(
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=temperature,
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=4096,
+            ),
         ),
     )
 
