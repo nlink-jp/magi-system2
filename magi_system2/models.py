@@ -41,6 +41,7 @@ class PersonaDesign(BaseModel):
     """Complete persona specification generated per topic."""
 
     name: str = Field(description="Display name")
+    icon: str = Field(default="👤", description="Single emoji representing this persona, e.g. 🛡️ 🚀 👥")
     archetype: str = Field(description="Short role label")
     background: str = Field(description="Professional/personal background (3-5 sentences)")
     expertise: list[str] = Field(description="Areas of expertise relevant to the topic")

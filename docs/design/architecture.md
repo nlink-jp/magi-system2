@@ -563,12 +563,12 @@ Enables:
 - `magi2 render --state discussion.json --html` — generate static HTML
 - Post-hoc analysis of discussion dynamics
 
-## Language Strategy: Hybrid Mode
+## Language Strategy: Native Language Mode
 
 ### Principle
 
-LLM reasoning quality is highest in English. All internal processing runs in
-English by default. Translation is applied at output time only.
+When `--lang` is specified, all LLMs generate directly in the target language.
+No post-hoc translation — eliminates extra API calls and latency entirely.
 
 ### Processing Pipeline
 
@@ -576,81 +576,38 @@ English by default. Translation is applied at output time only.
 Input (any language)
   │
   ▼
-Facilitator: detect input language, translate to English if needed
-  │
-  ▼
-Topic Analysis (English) ──→ Persona Design (English)
-  │
-  ▼
-Discussion Loop (all in English):
-  ├─ Facilitator actions: English
-  ├─ inner_thoughts: ALWAYS English (max reasoning quality, rarely displayed)
-  └─ statements: English
-  │
-  ▼
-Output Translation (Gemini Flash, on demand):
-  ├─ --lang ja  → Japanese display + Japanese report
-  ├─ --lang en  → English (no translation, fastest)
-  └─ (default)  → Match input language
+--lang ja specified?
+  ├─ Yes → LANGUAGE directive appended to all system prompts
+  │        All LLM output generated directly in Japanese
+  └─ No  → Default English output
 ```
 
-### What Runs in English
+### How It Works
 
-| Component | Language | Reason |
-|-----------|----------|--------|
-| Topic analysis | English | Facilitator reasoning accuracy |
-| Persona design | English | Personality nuance via English vocabulary |
-| inner_thoughts | Always English | Private, max reasoning quality |
-| Facilitator actions | English | Meta-analysis precision |
-| Persona statements | English | Argument quality |
-| Convergence signals | English | Numerical + short text, no translation needed |
+Each system prompt receives a LANGUAGE directive when `--lang` is set:
 
-### What Gets Translated
+| Component | Directive |
+|-----------|-----------|
+| Topic analysis (facilitator) | "Write ALL output in {lang}" — names, archetypes, stances all in target language |
+| Flow control (facilitator) | "Write the 'intervention' field in {lang}" — internal fields stay English |
+| Persona response | "Write statement, key_points, stance_evolution, convergence_conditions in {lang}" |
+| Synthesis report | "Write the entire report in {lang}" |
 
-| Component | Translated when | Method |
-|-----------|----------------|--------|
-| Persona statements | `--lang` specified | Gemini Flash per turn (streamed) |
-| Facilitator interventions | `--lang` specified | Gemini Flash per turn |
-| Final report | `--lang` specified | Gemini Flash (batch) |
-| inner_thoughts (display) | `--show-thoughts` + `--lang` | Gemini Flash on demand |
-| Persona names/archetypes | Always | Part of persona design prompt |
+### What Stays in English
 
-### Native Discussion Mode (`--native-discussion`)
+Even with `--lang ja`, these remain English (internal only, not displayed):
+- Facilitator's `next_speaker`, `strategic_intent`, `hidden_dynamics`
+- Persona's `inner_thoughts` (LLM chooses naturally, often English)
+- Convergence signals (numerical)
 
-For topics where the source language carries essential nuance (e.g. Japanese
-legal terminology, cultural concepts without direct English equivalents):
+### Design Decision: Why Not Post-hoc Translation?
 
-```bash
-magi2 --file topic.md --native-discussion --lang ja
-```
-
-In this mode:
-- Statements are generated in the input language directly
-- inner_thoughts remain English (reasoning quality)
-- No output translation needed for statements (already in target language)
-- Facilitator actions remain English (internal only)
-
-### Translation Caching
-
-Translated outputs are cached alongside the English originals in the
-discussion state. Re-rendering the report in a different language doesn't
-require re-running the discussion:
-
-```bash
-magi2 render --state discussion.json --lang ja    # Japanese
-magi2 render --state discussion.json --lang en    # English (from cache)
-magi2 render --state discussion.json --lang ko    # Korean (new translation)
-```
-
-### CLI Integration
-
-```bash
-magi2 "Topic text"                      # English discussion, output in input language
-magi2 --file topic.md --lang ja         # English discussion, Japanese output
-magi2 --file topic.md --lang en         # English discussion, English output
-magi2 --native-discussion --lang ja     # Japanese discussion, Japanese output
-magi2 --show-thoughts --lang ja         # Japanese output + translated thought bubbles
-```
+Initially designed with an English-internal + translation-at-output approach
+(ir-tracker pattern). Abandoned because:
+1. Translation added 4-5 extra API calls per turn → unacceptable latency
+2. Gemini Pro/Flash generate high-quality output in Japanese directly
+3. Native generation preserves cultural nuance better than translation
+4. Simpler architecture — no translator module in the critical path
 
 ## Security
 
@@ -797,19 +754,18 @@ Categories:
 ## Differences from v1 Summary
 
 1. **Rich personality model** — v1 had 3-line descriptions. v2 has full personality
-   profiles with communication style, cognitive traits, emotional tendencies,
-   interpersonal patterns, blind spots, and persuasion sensitivities.
-2. **Dual memory (inner/public)** — Personas have private thoughts that inform
-   but don't directly enter the shared conversation. Creates natural gaps between
-   thinking and speaking, enabling strategic behavior and gradual position shifts.
-3. **Facilitator reads inner thoughts** — Enables intelligent flow control based
-   on what personas really think, not just what they say publicly.
-4. **No explicit emotion model** — v1 tracked sentiment/intensity. v2's inner
-   thoughts naturally capture emotional state with far richer nuance.
-5. **No speaker heuristic** — Facilitator LLM decides, informed by inner thoughts.
-6. **No history truncation** — 1M tokens eliminates the need.
-7. **No fixed personas** — Generated per topic with rich personality profiles.
-8. **No fixed turn interventions** — Facilitator intervenes adaptively.
-9. **Gradient convergence** — Replaces binary votes with continuous signals.
-10. **Facilitator as separate agent** — Not system messages but a reasoning entity
-    with access to the "subtext" of the discussion.
+   profiles with communication, cognition, emotion, interpersonal patterns, blind spots.
+2. **Dual memory (inner/public)** — Private thoughts + public statements. Creates
+   natural gaps between thinking and speaking, enabling strategic behavior.
+3. **Facilitator reads inner thoughts** — Intelligent flow control based on subtext.
+4. **Streaming + CoT** — Real-time token-by-token output with Gemini thinking visible.
+5. **Consensus check** — Before closing, facilitator asks low-readiness personas directly.
+6. **Native language mode** — `--lang ja` generates directly in target language. No translation latency.
+7. **Persona icons** — Emoji icons assigned per persona, displayed in UI.
+8. **Web UI** — WebSocket real-time, not TUI. Thought bubbles, CoT, convergence gauge.
+9. **原稿用紙/墨色 themes** — Warm manuscript paper light theme, sumi-ink dark theme.
+10. **Multimodal input** — PDF, images, audio, video as discussion topics.
+11. **Replay mode** — Re-watch saved discussions without LLM calls.
+12. **No speaker heuristic** — Facilitator LLM decides, informed by inner thoughts.
+13. **No history truncation** — 1M tokens eliminates the need.
+14. **Gradient convergence** — Replaces binary votes with continuous 0.0–1.0 signals.

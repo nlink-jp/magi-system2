@@ -9,13 +9,23 @@
 <body>
 <nav>
   <div class="nav-inner">
-    <span class="logo">MAGI System 2</span>
-    <span class="status" id="status">Connecting...</span>
-    <div class="controls">
-      <label><input type="checkbox" id="toggle-thoughts"> Show Thoughts</label>
-      <label><input type="checkbox" id="toggle-facilitator"> Show Facilitator</label>
-      <button class="btn-theme" id="btn-theme" title="Toggle theme">☀</button>
-      <button class="btn" id="btn-start">Start Discussion</button>
+    <div class="nav-brand">
+      <span class="logo">MAGI<span class="logo-dim">System</span>2</span>
+      <span class="status-pill" id="status">Connecting</span>
+    </div>
+    <div class="nav-toggles">
+      <label class="toggle-chip" title="Show persona inner thoughts">
+        <input type="checkbox" id="toggle-thoughts">
+        <span class="chip-label">💭 Thoughts</span>
+      </label>
+      <label class="toggle-chip" title="Show facilitator analysis">
+        <input type="checkbox" id="toggle-facilitator">
+        <span class="chip-label">🎯 Facilitator</span>
+      </label>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-icon" id="btn-theme" title="Toggle theme">☀</button>
+      <button class="btn btn-start" id="btn-start">▶ Start</button>
     </div>
   </div>
 </nav>
@@ -120,13 +130,13 @@
 
     ws.onopen = function() {
       statusEl.textContent = 'Connected';
-      statusEl.className = 'status connected';
+      statusEl.className = 'status-pill connected';
       ws.send(JSON.stringify({action: 'get_config'}));
     };
 
     ws.onclose = function() {
       statusEl.textContent = 'Disconnected';
-      statusEl.className = 'status disconnected';
+      statusEl.className = 'status-pill disconnected';
       setTimeout(connect, 3000);
     };
 
@@ -178,10 +188,10 @@
         break;
 
       case 'topic_analyzed':
-        addTimelineCard('facilitator', 'Topic Analyzed', data.summary);
-        // Create persona panels
+        addTimelineCard('facilitator', '📋 Topic Analyzed', data.summary);
         data.personas.forEach(function(p) {
-          addPersonaPanel(p.name, p.archetype);
+          personaIcons[p.name] = p.icon || '👤';
+          addPersonaPanel(p.name, p.icon || '👤', p.archetype);
         });
         break;
 
@@ -237,6 +247,9 @@
     timeline.scrollTop = timeline.scrollHeight;
   }
 
+  // ── Persona icon map ──
+  var personaIcons = {};  // name -> emoji
+
   // ── Streaming card management ──
   var activeStreamCards = {};  // key -> card element
 
@@ -247,9 +260,10 @@
     if (!card) {
       card = document.createElement('div');
       card.className = 'card card-persona card-streaming';
+      var sIcon = personaIcons[data.speaker] || '👤';
       var header = document.createElement('div');
       header.className = 'card-header';
-      header.textContent = data.speaker + ' — Turn ' + data.turn + ' (streaming...)';
+      header.textContent = sIcon + ' ' + data.speaker + ' — Turn ' + data.turn + ' (streaming...)';
       card.appendChild(header);
       var cotEl = document.createElement('div');
       cotEl.className = 'stream-cot';
@@ -364,9 +378,10 @@
     var card = document.createElement('div');
     card.className = 'card card-persona';
 
+    var icon = data.icon || personaIcons[data.speaker] || '👤';
     var header = document.createElement('div');
     header.className = 'card-header';
-    header.textContent = data.speaker + (data.turn > 0 ? ' — Turn ' + data.turn : '');
+    header.textContent = icon + ' ' + data.speaker + (data.turn > 0 ? ' — Turn ' + data.turn : '');
     card.appendChild(header);
 
     // Inner thoughts (hidden by default)
@@ -397,12 +412,12 @@
     timeline.appendChild(card);
   }
 
-  function addPersonaPanel(name, archetype) {
+  function addPersonaPanel(name, icon, archetype) {
     var panel = document.createElement('div');
     panel.className = 'persona-panel';
     panel.id = 'panel-' + name.replace(/\s+/g, '-');
     panel.innerHTML =
-      '<div class="persona-name">' + name + '</div>' +
+      '<div class="persona-name"><span class="persona-icon">' + icon + '</span> ' + name + '</div>' +
       '<div class="persona-archetype">' + archetype + '</div>' +
       '<div class="persona-readiness"><div class="readiness-bar"><div class="readiness-fill" style="width:0%"></div></div> <span class="readiness-value">0.00</span></div>' +
       '<div class="persona-stance"></div>';

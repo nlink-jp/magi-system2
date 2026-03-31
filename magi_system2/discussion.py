@@ -64,7 +64,7 @@ def run_discussion(
 
     emit("topic_analyzed", {
         "summary": analysis.summary,
-        "personas": [{"name": p.name, "archetype": p.archetype} for p in analysis.personas],
+        "personas": [{"name": p.name, "icon": p.icon, "archetype": p.archetype} for p in analysis.personas],
         "attachments": [d.reference_label for d in analysis.attachment_digests],
     })
 
@@ -138,6 +138,7 @@ def run_discussion(
 
         emit("persona_turn", {
             "speaker": speaker_name,
+            "icon": design.icon,
             "archetype": design.archetype,
             "statement": response.statement,
             "key_points": response.key_points,
@@ -258,6 +259,7 @@ def run_discussion(
 
                 emit("persona_turn", {
                     "speaker": lp_name,
+                    "icon": lp_design.icon,
                     "archetype": lp_design.archetype,
                     "statement": lp_response.statement,
                     "key_points": lp_response.key_points,

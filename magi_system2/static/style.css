@@ -1,46 +1,59 @@
-/* Light theme (default) */
+/* Light theme (default) — 原稿用紙 (manuscript paper) warm palette */
 :root {
-  --bg: #f5f6fa;
-  --surface: #ffffff;
-  --border: #e0e2e8;
-  --text: #1a1d27;
-  --text-secondary: #5f6878;
-  --accent: #2563eb;
-  --accent-dim: #dbeafe;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --facilitator: #7c3aed;
-  --thought: #f0f4f8;
-  --thought-border: #f59e0b;
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --bg: #f0ebe3;
+  --surface: #faf6f0;
+  --border: #e0d8cc;
+  --text: #2c2418;
+  --text-secondary: #8c7e6a;
+  --accent: #b85c38;
+  --accent-dim: #f5e6db;
+  --success: #5a8a4a;
+  --warning: #c68a2e;
+  --danger: #b84233;
+  --facilitator: #7b5ea7;
+  --thought: #f5f0e8;
+  --thought-border: #c68a2e;
+  --persona-a: #b85c38;
+  --persona-b: #5a8a4a;
+  --persona-c: #c68a2e;
+  --nav-bg: #faf6f0;
+  --card-shadow: 0 1px 4px rgba(44,36,24,0.06), 0 0 1px rgba(44,36,24,0.08);
+  --card-hover: 0 4px 12px rgba(44,36,24,0.1);
 }
 
-/* Dark theme */
+/* Dark theme — 墨色 (sumi-ink) warm dark palette matching 原稿用紙 tones */
 [data-theme="dark"] {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --border: #2a2d3a;
-  --text: #e4e6eb;
-  --text-secondary: #9da3b0;
-  --accent: #4a9eff;
-  --accent-dim: #1e3a5f;
-  --success: #4caf50;
-  --warning: #ff9800;
-  --danger: #ef5350;
-  --facilitator: #7c4dff;
-  --thought: #37474f;
-  --thought-border: #ff9800;
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --bg: #1a1714;
+  --surface: #242019;
+  --border: #3a352c;
+  --text: #ede6d9;
+  --text-secondary: #9c9283;
+  --accent: #e8845a;
+  --accent-dim: #3a2518;
+  --success: #7aad68;
+  --warning: #daa04a;
+  --danger: #d45a4a;
+  --facilitator: #a07cc8;
+  --thought: #2a2520;
+  --thought-border: #daa04a;
+  --persona-a: #e8845a;
+  --persona-b: #7aad68;
+  --persona-c: #daa04a;
+  --nav-bg: #242019;
+  --card-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 1px rgba(0,0,0,0.3);
+  --card-hover: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a; --text: #e4e6eb;
-    --text-secondary: #9da3b0; --accent: #4a9eff; --accent-dim: #1e3a5f;
-    --success: #4caf50; --warning: #ff9800; --danger: #ef5350;
-    --facilitator: #7c4dff; --thought: #37474f; --thought-border: #ff9800;
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --bg: #1a1714; --surface: #242019; --border: #3a352c; --text: #ede6d9;
+    --text-secondary: #9c9283; --accent: #e8845a; --accent-dim: #3a2518;
+    --success: #7aad68; --warning: #daa04a; --danger: #d45a4a;
+    --facilitator: #a07cc8; --thought: #2a2520; --thought-border: #daa04a;
+    --persona-a: #e8845a; --persona-b: #7aad68; --persona-c: #daa04a;
+    --nav-bg: #242019;
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 1px rgba(0,0,0,0.3);
+    --card-hover: 0 4px 12px rgba(0,0,0,0.5);
   }
 }
 
@@ -53,25 +66,60 @@ body {
 }
 
 /* Nav */
-nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; flex-shrink: 0; }
-.nav-inner { display: flex; align-items: center; gap: 16px; max-width: 1600px; margin: 0 auto; }
-.logo { font-size: 18px; font-weight: 700; color: var(--accent); }
-.status { font-size: 13px; color: var(--text-secondary); }
-.status.connected { color: var(--success); }
-.status.disconnected { color: var(--danger); }
-.controls { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 13px; }
-.controls label { color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+nav {
+  background: var(--nav-bg); border-bottom: 1px solid var(--border);
+  padding: 10px 24px; flex-shrink: 0;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.nav-inner {
+  display: flex; align-items: center; gap: 16px;
+  max-width: 1600px; margin: 0 auto;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  font-size: 18px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.5px;
+}
+.logo-dim { font-weight: 400; color: var(--text-secondary); font-size: 14px; margin: 0 2px; }
+.status-pill {
+  font-size: 11px; padding: 2px 10px; border-radius: 10px;
+  background: var(--border); color: var(--text-secondary);
+  font-weight: 500;
+}
+.status-pill.connected { background: rgba(48,209,88,0.15); color: var(--success); }
+.status-pill.disconnected { background: rgba(255,69,58,0.15); color: var(--danger); }
+
+.nav-toggles { display: flex; gap: 6px; margin-left: auto; }
+.toggle-chip {
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+  padding: 4px 12px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.toggle-chip:has(input:checked) {
+  background: var(--accent-dim); border-color: var(--accent); color: var(--accent);
+}
+.toggle-chip input { display: none; }
+.chip-label { white-space: nowrap; }
+
+.nav-actions { display: flex; align-items: center; gap: 8px; }
 .btn {
-  background: var(--accent); color: white; border: none; border-radius: 6px;
-  padding: 6px 16px; font-size: 13px; cursor: pointer; font-weight: 600;
+  background: var(--accent); color: white; border: none; border-radius: 8px;
+  padding: 7px 18px; font-size: 13px; cursor: pointer; font-weight: 600;
+  transition: opacity 0.15s, transform 0.1s;
 }
-.btn:hover { opacity: 0.9; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-theme {
-  background: var(--surface); border: 1px solid var(--border); color: var(--text);
-  border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 14px;
+.btn:hover { opacity: 0.88; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-icon {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text-secondary);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 14px;
+  transition: all 0.15s; line-height: 1;
 }
-.btn-theme:hover { border-color: var(--accent); }
+.btn-icon:hover { border-color: var(--accent); color: var(--text); }
+
+.btn-start { padding: 7px 20px; border-radius: 10px; font-size: 13px; }
 
 /* Main layout */
 .main {
@@ -87,12 +135,17 @@ nav { background: var(--surface); border-bottom: 1px solid var(--border); paddin
 
 /* Cards */
 .card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px; margin-bottom: 10px; box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s;
 }
+.card:hover { box-shadow: var(--card-hover); }
 .card-facilitator { border-left: 3px solid var(--facilitator); }
 .card-persona { border-left: 3px solid var(--accent); }
-.card-header { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+.card-persona:nth-child(3n+1) { border-left-color: var(--persona-a); }
+.card-persona:nth-child(3n+2) { border-left-color: var(--persona-b); }
+.card-persona:nth-child(3n) { border-left-color: var(--persona-c); }
+.card-header { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; letter-spacing: -0.2px; }
 .card-facilitator .card-header { color: var(--facilitator); }
 .card-body { font-size: 14px; line-height: 1.7; }
 .card-body p { margin: 0 0 8px; }
@@ -156,17 +209,22 @@ nav { background: var(--surface); border-bottom: 1px solid var(--border); paddin
 .sidebar { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
 .persona-panel {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  padding: 14px; box-shadow: var(--card-shadow);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px; box-shadow: var(--card-shadow); transition: box-shadow 0.2s;
 }
-.persona-name { font-size: 15px; font-weight: 700; color: var(--accent); }
-.persona-archetype { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.persona-panel:hover { box-shadow: var(--card-hover); }
+.persona-panel:nth-child(1) .persona-name { color: var(--persona-a); }
+.persona-panel:nth-child(2) .persona-name { color: var(--persona-b); }
+.persona-panel:nth-child(3) .persona-name { color: var(--persona-c); }
+.persona-name { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; display: flex; align-items: center; gap: 4px; }
+.persona-icon { font-size: 20px; line-height: 1; }
+.persona-archetype { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
 .persona-readiness { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .readiness-bar {
   flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;
   min-width: 80px;
 }
-.readiness-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s ease; min-height: 8px; }
+.readiness-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); border-radius: 4px; transition: width 0.5s ease; min-height: 8px; }
 .readiness-value { font-size: 12px; color: var(--text-secondary); min-width: 32px; }
 .persona-stance { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 
@@ -178,8 +236,8 @@ nav { background: var(--surface); border-bottom: 1px solid var(--border); paddin
 }
 .convergence-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .convergence-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.convergence-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s; }
-.convergence-fill.converged { background: var(--success); }
+.convergence-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--facilitator)); border-radius: 4px; transition: width 0.5s ease; }
+.convergence-fill.converged { background: linear-gradient(90deg, var(--success), #34d399); }
 .convergence-value { font-size: 13px; font-weight: 600; color: var(--accent); min-width: 36px; }
 .phase-label { font-size: 12px; color: var(--text-secondary); }
 .turn-label { font-size: 12px; color: var(--text-secondary); }
