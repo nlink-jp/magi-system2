@@ -304,8 +304,36 @@ def run_discussion(
     # ── Phase 2: Closing ──
     if state.is_converged:
         log("CONV", "Discussion converged. Generating closing statements...")
+        closing_announcement = (
+            "The discussion has reached consensus. "
+            "Each participant will now give their final statement."
+        )
+        if lang:
+            closing_announcement = (
+                "議論が合意に達しました。各参加者から最終コメントをお願いします。"
+            )
     else:
         log("CONV", f"Max turns ({max_turns}) reached without convergence.")
+        closing_announcement = (
+            "We have reached the maximum number of turns. "
+            "Each participant will now give their final statement summarizing their position."
+        )
+        if lang:
+            closing_announcement = (
+                "最大ターン数に達しました。各参加者から最終的な立場をまとめたコメントをお願いします。"
+            )
+
+    closing_fac_msg = Message(
+        turn=state.turn,
+        speaker="facilitator",
+        role="facilitator",
+        content=closing_announcement,
+    )
+    state.messages.append(closing_fac_msg)
+    emit("facilitator_intervention", {
+        "content": closing_announcement,
+        "phase": "closing",
+    })
 
     # Generate closing statements from each persona
     for persona in analysis.personas:
