@@ -177,7 +177,12 @@
         });
         break;
 
+      case 'stream_chunk':
+        handleStreamChunk(data);
+        break;
+
       case 'persona_turn':
+        finalizeStreamCard(data.speaker, data.turn);
         addPersonaTurn(data);
         updatePersonaPanel(data.speaker, data);
         turnLabel.textContent = 'Turn ' + data.turn;
@@ -219,6 +224,53 @@
     }
     // Auto-scroll
     timeline.scrollTop = timeline.scrollHeight;
+  }
+
+  // ── Streaming card management ──
+  var activeStreamCards = {};  // speaker -> card element
+
+  function handleStreamChunk(data) {
+    var key = data.speaker + '-' + data.turn;
+    var card = activeStreamCards[key];
+
+    if (!card) {
+      // Create streaming card
+      card = document.createElement('div');
+      card.className = 'card card-persona card-streaming';
+      var header = document.createElement('div');
+      header.className = 'card-header';
+      header.textContent = data.speaker + ' — Turn ' + data.turn + ' (streaming...)';
+      card.appendChild(header);
+      var cotEl = document.createElement('div');
+      cotEl.className = 'stream-cot';
+      cotEl.style.display = showThoughts ? 'block' : 'none';
+      card.appendChild(cotEl);
+      var textEl = document.createElement('div');
+      textEl.className = 'stream-text';
+      card.appendChild(textEl);
+      timeline.appendChild(card);
+      activeStreamCards[key] = card;
+    }
+
+    if (data.chunk_type === 'thought') {
+      var cot = card.querySelector('.stream-cot');
+      cot.textContent += data.text;
+      cot.style.display = showThoughts ? 'block' : 'none';
+    } else {
+      var txt = card.querySelector('.stream-text');
+      txt.textContent += data.text;
+    }
+
+    timeline.scrollTop = timeline.scrollHeight;
+  }
+
+  function finalizeStreamCard(speaker, turn) {
+    var key = speaker + '-' + turn;
+    var card = activeStreamCards[key];
+    if (card) {
+      card.remove();
+      delete activeStreamCards[key];
+    }
   }
 
   // Simple Markdown to HTML (XSS-safe: escapes first, then applies formatting)

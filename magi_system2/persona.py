@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from magi_system2.console import log
-from magi_system2.llm import generate_structured
+from magi_system2.llm import StreamCallback, generate_structured, generate_structured_stream
 from magi_system2.models import (
     DiscussionState,
     InnerThoughts,
@@ -78,6 +80,7 @@ def generate_response(
     design: PersonaDesign,
     state: DiscussionState,
     facilitator_instruction: str,
+    on_chunk: StreamCallback | None = None,
 ) -> tuple[PersonaResponse, int, int]:
     """Generate a persona's response to the current discussion state.
 
@@ -116,10 +119,11 @@ def generate_response(
     user_content = ["\n".join(parts)]
 
     log("TURN", f"#{state.turn + 1} Speaker: {design.name}...")
-    result, in_tok, out_tok = generate_structured(
+    result, in_tok, out_tok = generate_structured_stream(
         system_prompt=system_prompt,
         user_content=user_content,
         response_schema=PersonaResponse,
+        on_chunk=on_chunk,
         role="pro",
         temperature=design.temperature,
         label=f"persona-{design.name}-t{state.turn + 1}",

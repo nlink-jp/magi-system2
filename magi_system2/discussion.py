@@ -104,10 +104,20 @@ def run_discussion(
 
         design = persona_map[speaker_name]
         emit("activity", {"who": speaker_name, "what": f"Thinking... (Turn {state.turn + 1})"})
+
+        def _on_chunk(chunk_type: str, text: str) -> None:
+            emit("stream_chunk", {
+                "speaker": speaker_name,
+                "chunk_type": chunk_type,  # "thought" or "text"
+                "text": text,
+                "turn": state.turn + 1,
+            })
+
         response, in_tok, out_tok = generate_response(
             design=design,
             state=state,
             facilitator_instruction=action.instruction,
+            on_chunk=_on_chunk,
         )
         state.token_usage.add_pro(in_tok, out_tok)
 

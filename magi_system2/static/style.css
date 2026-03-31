@@ -102,6 +102,21 @@ nav { background: var(--surface); border-bottom: 1px solid var(--border); paddin
 .card-body h4 { font-size: 14px; color: var(--accent); }
 .card-body strong { color: var(--text); }
 
+/* Streaming card */
+.card-streaming { border-style: dashed; opacity: 0.85; }
+.card-streaming .card-header { color: var(--warning); }
+.stream-cot {
+  background: var(--thought); border-radius: 4px; padding: 8px 10px;
+  margin-bottom: 6px; font-size: 12px; color: var(--text-secondary);
+  border-left: 2px solid var(--thought-border); font-style: italic;
+  white-space: pre-wrap; max-height: 150px; overflow-y: auto;
+}
+.stream-cot::before { content: "🧠 CoT: "; font-style: normal; }
+.stream-text {
+  font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+  color: var(--text);
+}
+
 /* Thought bubble */
 .thought-bubble {
   background: var(--thought); border-radius: 6px; padding: 10px 12px;
