@@ -1,0 +1,2 @@
+[console_scripts]
+magi2 = magi_system2.cli:main

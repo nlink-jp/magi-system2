@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAGI System 2</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="logo">MAGI System 2</span>
+    <span class="status" id="status">Connecting...</span>
+    <div class="controls">
+      <label><input type="checkbox" id="toggle-thoughts"> Show Thoughts</label>
+      <label><input type="checkbox" id="toggle-facilitator"> Show Facilitator</label>
+      <button class="btn" id="btn-start">Start Discussion</button>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- Left: Timeline -->
+  <div class="timeline" id="timeline">
+    <div class="empty-state" id="empty-state">
+      Click "Start Discussion" to begin.
+    </div>
+  </div>
+
+  <!-- Right: Persona panels -->
+  <div class="sidebar" id="sidebar">
+    <!-- Populated dynamically -->
+  </div>
+</div>
+
+<!-- Convergence bar -->
+<div class="convergence-bar">
+  <div class="convergence-label">Convergence</div>
+  <div class="convergence-track">
+    <div class="convergence-fill" id="convergence-fill" style="width: 0%"></div>
+  </div>
+  <span class="convergence-value" id="convergence-value">0.00</span>
+  <span class="phase-label" id="phase-label">—</span>
+  <span class="turn-label" id="turn-label">Turn 0</span>
+</div>
+
+<script>
+(function() {
+  var ws = null;
+  var showThoughts = false;
+  var showFacilitator = false;
+
+  var timeline = document.getElementById('timeline');
+  var sidebar = document.getElementById('sidebar');
+  var emptyState = document.getElementById('empty-state');
+  var statusEl = document.getElementById('status');
+  var convFill = document.getElementById('convergence-fill');
+  var convValue = document.getElementById('convergence-value');
+  var phaseLabel = document.getElementById('phase-label');
+  var turnLabel = document.getElementById('turn-label');
+
+  document.getElementById('toggle-thoughts').addEventListener('change', function(e) {
+    showThoughts = e.target.checked;
+    document.querySelectorAll('.thought-bubble').forEach(function(el) {
+      el.style.display = showThoughts ? 'block' : 'none';
+    });
+  });
+
+  document.getElementById('toggle-facilitator').addEventListener('change', function(e) {
+    showFacilitator = e.target.checked;
+    document.querySelectorAll('.facilitator-insight').forEach(function(el) {
+      el.style.display = showFacilitator ? 'block' : 'none';
+    });
+  });
+
+  document.getElementById('btn-start').addEventListener('click', function() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({action: 'start'}));
+      this.disabled = true;
+      this.textContent = 'Running...';
+      emptyState.style.display = 'none';
+    }
+  });
+
+  function connect() {
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/ws');
+
+    ws.onopen = function() {
+      statusEl.textContent = 'Connected';
+      statusEl.className = 'status connected';
+      ws.send(JSON.stringify({action: 'get_config'}));
+    };
+
+    ws.onclose = function() {
+      statusEl.textContent = 'Disconnected';
+      statusEl.className = 'status disconnected';
+      setTimeout(connect, 3000);
+    };
+
+    ws.onmessage = function(e) {
+      var msg = JSON.parse(e.data);
+      handleEvent(msg.type, msg.data);
+    };
+  }
+
+  function handleEvent(type, data) {
+    switch(type) {
+      case 'config':
+        statusEl.textContent = 'Ready — ' + data.topic.substring(0, 60) + '...';
+        break;
+
+      case 'topic_analyzed':
+        addTimelineCard('facilitator', 'Topic Analyzed', data.summary);
+        // Create persona panels
+        data.personas.forEach(function(p) {
+          addPersonaPanel(p.name, p.archetype);
+        });
+        break;
+
+      case 'persona_turn':
+        addPersonaTurn(data);
+        updatePersonaPanel(data.speaker, data);
+        turnLabel.textContent = 'Turn ' + data.turn;
+        phaseLabel.textContent = data.phase;
+        break;
+
+      case 'facilitator_intervention':
+        addTimelineCard('facilitator', 'Facilitator', data.content);
+        phaseLabel.textContent = data.phase;
+        break;
+
+      case 'convergence_update':
+        var pct = Math.round(data.facilitator_assessment * 100);
+        convFill.style.width = pct + '%';
+        convValue.textContent = data.facilitator_assessment.toFixed(2);
+        if (data.is_converged) {
+          convFill.classList.add('converged');
+          statusEl.textContent = 'Converged!';
+        }
+        break;
+
+      case 'closing_statement':
+        addPersonaTurn({
+          speaker: data.speaker,
+          statement: '[Final] ' + data.statement,
+          inner_thoughts: data.inner_thoughts,
+          turn: -1,
+        });
+        break;
+
+      case 'discussion_complete':
+        addTimelineCard('facilitator', 'Synthesis Report', data.report);
+        statusEl.textContent = 'Complete — ' + data.turns + ' turns';
+        document.getElementById('btn-start').textContent = 'Complete';
+        turnLabel.textContent = 'Turn ' + data.turns;
+        break;
+    }
+    // Auto-scroll
+    timeline.scrollTop = timeline.scrollHeight;
+  }
+
+  function addTimelineCard(role, title, content) {
+    var card = document.createElement('div');
+    card.className = 'card card-' + role;
+    var h = document.createElement('div');
+    h.className = 'card-header';
+    h.textContent = title;
+    card.appendChild(h);
+    var body = document.createElement('div');
+    body.className = 'card-body';
+    body.textContent = content;
+    card.appendChild(body);
+    timeline.appendChild(card);
+  }
+
+  function addPersonaTurn(data) {
+    var card = document.createElement('div');
+    card.className = 'card card-persona';
+
+    var header = document.createElement('div');
+    header.className = 'card-header';
+    header.textContent = data.speaker + (data.turn > 0 ? ' — Turn ' + data.turn : '');
+    card.appendChild(header);
+
+    // Inner thoughts (hidden by default)
+    if (data.inner_thoughts) {
+      var thought = document.createElement('div');
+      thought.className = 'thought-bubble';
+      thought.style.display = showThoughts ? 'block' : 'none';
+      thought.textContent = data.inner_thoughts.honest_reaction;
+      card.appendChild(thought);
+    }
+
+    var body = document.createElement('div');
+    body.className = 'card-body';
+    body.textContent = data.statement;
+    card.appendChild(body);
+
+    if (data.key_points && data.key_points.length > 0) {
+      var points = document.createElement('ul');
+      points.className = 'key-points';
+      data.key_points.forEach(function(p) {
+        var li = document.createElement('li');
+        li.textContent = p;
+        points.appendChild(li);
+      });
+      card.appendChild(points);
+    }
+
+    timeline.appendChild(card);
+  }
+
+  function addPersonaPanel(name, archetype) {
+    var panel = document.createElement('div');
+    panel.className = 'persona-panel';
+    panel.id = 'panel-' + name.replace(/\s+/g, '-');
+    panel.innerHTML =
+      '<div class="persona-name">' + name + '</div>' +
+      '<div class="persona-archetype">' + archetype + '</div>' +
+      '<div class="persona-readiness"><span class="readiness-bar"><span class="readiness-fill" style="width:0%"></span></span> <span class="readiness-value">0.00</span></div>' +
+      '<div class="persona-stance"></div>';
+    sidebar.appendChild(panel);
+  }
+
+  function updatePersonaPanel(name, data) {
+    var panel = document.getElementById('panel-' + name.replace(/\s+/g, '-'));
+    if (!panel) return;
+    var fill = panel.querySelector('.readiness-fill');
+    var val = panel.querySelector('.readiness-value');
+    var stance = panel.querySelector('.persona-stance');
+    if (fill) fill.style.width = Math.round(data.readiness_to_converge * 100) + '%';
+    if (val) val.textContent = data.readiness_to_converge.toFixed(2);
+    if (stance && data.stance_evolution) stance.textContent = data.stance_evolution;
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>

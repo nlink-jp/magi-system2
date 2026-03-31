@@ -1,0 +1,16 @@
+.venv/
+dist/
+__pycache__/
+*.pyc
+.claude/settings.local.json
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+__MACOSX/
+
+# Output
+*.json
+!pyproject.toml
