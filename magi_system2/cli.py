@@ -43,6 +43,12 @@ def main() -> None:
     export_p.add_argument("--show-thoughts", action="store_true")
     export_p.add_argument("-o", "--output", default="", help="Output file path")
 
+    # ── replay ──
+    replay_p = subparsers.add_parser("replay", help="Replay saved discussion in Web UI (no LLM)")
+    replay_p.add_argument("--state", required=True, help="Path to discussion.json")
+    replay_p.add_argument("--port", "-p", type=int, default=8080, help="Web UI port")
+    replay_p.add_argument("--host", default="127.0.0.1", help="Web UI host")
+
     # ── render ──
     render_p = subparsers.add_parser("render", help="Re-render in another language")
     render_p.add_argument("--state", required=True, help="Path to discussion.json")
@@ -74,6 +80,8 @@ def main() -> None:
 
     if args.command == "discuss":
         _run_discuss(args)
+    elif args.command == "replay":
+        _run_replay(args)
     elif args.command == "export":
         _run_export(args)
     elif args.command == "render":
@@ -111,6 +119,21 @@ def _run_discuss(args) -> None:
     if args.attach:
         log("INIT", f"Attachments: {', '.join(args.attach)}")
 
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+
+
+def _run_replay(args) -> None:
+    from magi_system2.web import create_replay_app
+    from magi_system2.models import DiscussionState
+    import uvicorn
+
+    state_data = json.loads(Path(args.state).read_text(encoding="utf-8"))
+    state = DiscussionState(**state_data)
+
+    app = create_replay_app(state)
+
+    log("WEB", f"Replay mode at http://{args.host}:{args.port}")
+    log("WEB", f"State: {args.state} ({state.turn} turns, {len(state.messages)} messages)")
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 

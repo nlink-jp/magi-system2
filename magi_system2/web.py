@@ -40,9 +40,20 @@ async def _broadcast(event_type: str, data: dict) -> None:
         _clients.remove(ws)
 
 
+def create_replay_app(state: DiscussionState) -> FastAPI:
+    """Create a replay-mode app from a saved discussion state."""
+    return create_app(
+        topic_text=state.topic_analysis.summary,
+        attachment_paths=[],
+        show_thoughts=True,
+        show_facilitator=True,
+        _replay_state=state,
+    )
+
+
 def create_app(
-    topic_text: str,
-    attachment_paths: list[str],
+    topic_text: str = "",
+    attachment_paths: list[str] | None = None,
     max_turns: int = 30,
     lang: str = "",
     native_discussion: bool = False,
@@ -50,6 +61,7 @@ def create_app(
     show_facilitator: bool = False,
     save: bool = False,
     output_dir: str = "",
+    _replay_state: DiscussionState | None = None,
 ) -> FastAPI:
     """Create the FastAPI application."""
     global _discussion_config
@@ -59,7 +71,7 @@ def create_app(
     # Store config for later use
     _discussion_config = {
         "topic_text": topic_text,
-        "attachment_paths": attachment_paths,
+        "attachment_paths": attachment_paths or [],
         "max_turns": max_turns,
         "lang": lang,
         "native_discussion": native_discussion,
@@ -67,6 +79,8 @@ def create_app(
         "show_facilitator": show_facilitator,
         "save": save,
         "output_dir": output_dir,
+        "replay_mode": _replay_state is not None,
+        "_replay_state": _replay_state,
     }
 
     # Static files
@@ -99,11 +113,12 @@ def create_app(
                     await ws.send_text(json.dumps({
                         "type": "config",
                         "data": {
-                            "topic": _discussion_config["topic_text"][:200],
-                            "attachments": _discussion_config["attachment_paths"],
-                            "max_turns": _discussion_config["max_turns"],
-                            "show_thoughts": _discussion_config["show_thoughts"],
-                            "show_facilitator": _discussion_config["show_facilitator"],
+                            "topic": _discussion_config.get("topic_text", "")[:200],
+                            "attachments": _discussion_config.get("attachment_paths", []),
+                            "max_turns": _discussion_config.get("max_turns", 30),
+                            "show_thoughts": _discussion_config.get("show_thoughts", False),
+                            "show_facilitator": _discussion_config.get("show_facilitator", False),
+                            "replay_mode": _discussion_config.get("replay_mode", False),
                         },
                     }))
 
@@ -126,6 +141,10 @@ def _run_discussion_thread() -> None:
 
     config = _discussion_config
 
+    if config.get("replay_mode"):
+        _replay_from_state()
+        return
+
     def on_event(event_type: str, data: dict) -> None:
         """Bridge discussion events to WebSocket broadcast."""
         if _event_loop is None:
@@ -143,6 +162,120 @@ def _run_discussion_thread() -> None:
     )
 
     # Auto-save if requested
-    if config["save"] and config["output_dir"]:
+    if config.get("save") and config.get("output_dir"):
         path = save_state(_state, config["output_dir"])
         log("SAVE", f"State saved to {path}")
+
+
+def _replay_from_state() -> None:
+    """Replay a saved discussion state as WebSocket events (no LLM calls)."""
+    import time
+
+    global _state
+    config = _discussion_config
+    state = config.get("_replay_state")
+    if state is None:
+        return
+
+    _state = state
+
+    def emit(event_type: str, data: dict) -> None:
+        if _event_loop is None:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(_broadcast(event_type, data), _event_loop)
+        except Exception:
+            pass
+        time.sleep(0.3)  # Pacing for visual effect
+
+    # Topic analyzed
+    emit("topic_analyzed", {
+        "summary": state.topic_analysis.summary,
+        "personas": [{"name": p.name, "archetype": p.archetype} for p in state.topic_analysis.personas],
+        "attachments": [d.reference_label for d in state.topic_analysis.attachment_digests],
+    })
+
+    persona_map = {p.name: p for p in state.topic_analysis.personas}
+    turn_thoughts: dict[str, int] = {p.name: 0 for p in state.topic_analysis.personas}
+    pro_tokens = 0
+    flash_tokens = 0
+
+    for msg in state.messages:
+        if msg.content.startswith("[Synthesis Report]"):
+            emit("activity", {"who": "Facilitator", "what": "Writing synthesis report..."})
+            time.sleep(0.5)
+            report = msg.content.replace("[Synthesis Report]\n\n", "")
+            emit("discussion_complete", {
+                "report": report,
+                "turns": state.turn,
+                "converged": state.is_converged,
+                "token_usage": {
+                    "pro": state.token_usage.pro_total,
+                    "flash": state.token_usage.flash_total,
+                    "total": state.token_usage.total,
+                },
+            })
+            continue
+
+        if msg.role == "facilitator":
+            emit("facilitator_intervention", {
+                "content": msg.content,
+                "phase": state.phase,
+            })
+        elif msg.role == "persona":
+            # Get inner thoughts
+            thoughts_data = {}
+            thought_idx = turn_thoughts.get(msg.speaker, 0)
+            thoughts_list = state.inner_thoughts.get(msg.speaker, [])
+            if thought_idx < len(thoughts_list):
+                thoughts_data = thoughts_list[thought_idx].model_dump()
+                turn_thoughts[msg.speaker] = thought_idx + 1
+
+            # Find convergence for this turn (cs.turn is 1-indexed)
+            readiness = 0.0
+            convergence_val = 0.0
+            for cs in state.convergence_history:
+                if cs.turn >= msg.turn + 1:
+                    readiness = cs.persona_readiness.get(msg.speaker, 0.0)
+                    convergence_val = cs.facilitator_assessment
+                    break
+
+            pro_tokens += 3000  # Approximate
+            flash_tokens += 1500
+
+            is_final = msg.content.startswith("[Final Statement]")
+            statement = msg.content.replace("[Final Statement] ", "") if is_final else msg.content
+
+            if is_final:
+                emit("closing_statement", {
+                    "speaker": msg.speaker,
+                    "statement": statement,
+                    "readiness_to_converge": readiness,
+                    "inner_thoughts": thoughts_data,
+                })
+            else:
+                emit("persona_turn", {
+                    "speaker": msg.speaker,
+                    "archetype": persona_map.get(msg.speaker, state.topic_analysis.personas[0]).archetype,
+                    "statement": statement,
+                    "key_points": [],
+                    "inner_thoughts": thoughts_data,
+                    "readiness_to_converge": readiness,
+                    "stance_evolution": "",
+                    "turn": msg.turn + 1,
+                    "phase": state.phase,
+                    "token_usage": {
+                        "pro": pro_tokens,
+                        "flash": flash_tokens,
+                        "total": pro_tokens + flash_tokens,
+                    },
+                })
+
+                emit("convergence_update", {
+                    "turn": msg.turn + 1,
+                    "facilitator_assessment": convergence_val,
+                    "persona_readiness": {p.name: 0.0 for p in state.topic_analysis.personas},
+                    "is_converged": False,
+                })
+
+    log("WEB", "Replay complete")
