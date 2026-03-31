@@ -228,10 +228,20 @@ def run_discussion(
 
                 lp_design = persona_map[lp_name]
                 emit("activity", {"who": lp_name, "what": "Responding to consensus check..."})
+
+                def _on_check_chunk(chunk_type: str, text: str, _name=lp_name) -> None:
+                    emit("stream_chunk", {
+                        "speaker": _name,
+                        "chunk_type": chunk_type,
+                        "text": text,
+                        "turn": state.turn + 1,
+                    })
+
                 lp_response, lp_in, lp_out = generate_response(
                     design=lp_design,
                     state=state,
                     facilitator_instruction="The facilitator is asking if you have remaining concerns before the group reaches consensus. Be honest.",
+                    on_chunk=_on_check_chunk,
                     lang=lang,
                 )
                 state.token_usage.add_pro(lp_in, lp_out)
@@ -305,10 +315,20 @@ def run_discussion(
             "what you agree with, what you still disagree on, and your "
             "recommendation. Be honest and specific."
         )
+
+        def _on_closing_chunk(chunk_type: str, text: str, _name=persona.name) -> None:
+            emit("stream_chunk", {
+                "speaker": _name,
+                "chunk_type": chunk_type,
+                "text": text,
+                "turn": state.turn + 1,
+            })
+
         response, in_tok, out_tok = generate_response(
             design=persona,
             state=state,
             facilitator_instruction=closing_instruction,
+            on_chunk=_on_closing_chunk,
             lang=lang,
         )
         state.token_usage.add_pro(in_tok, out_tok)
