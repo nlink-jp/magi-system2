@@ -214,6 +214,7 @@
         break;
 
       case 'closing_statement':
+        finalizeAllStreamCards();
         addPersonaTurn({
           speaker: data.speaker,
           statement: '[Final] ' + data.statement,
@@ -223,7 +224,9 @@
         break;
 
       case 'discussion_complete':
+        finalizeAllStreamCards();
         addTimelineCard('facilitator', 'Synthesis Report', data.report);
+        addDownloadButton(data);
         statusEl.textContent = 'Complete — ' + data.turns + ' turns';
         document.getElementById('btn-start').textContent = 'Complete';
         if (data.token_usage) updateTokens(data.token_usage);
@@ -235,14 +238,13 @@
   }
 
   // ── Streaming card management ──
-  var activeStreamCards = {};  // speaker -> card element
+  var activeStreamCards = {};  // key -> card element
 
   function handleStreamChunk(data) {
     var key = data.speaker + '-' + data.turn;
     var card = activeStreamCards[key];
 
     if (!card) {
-      // Create streaming card
       card = document.createElement('div');
       card.className = 'card card-persona card-streaming';
       var header = document.createElement('div');
@@ -264,21 +266,60 @@
       var cot = card.querySelector('.stream-cot');
       cot.textContent += data.text;
       cot.style.display = showThoughts ? 'block' : 'none';
+      // Auto-scroll CoT section to bottom
+      cot.scrollTop = cot.scrollHeight;
     } else {
       var txt = card.querySelector('.stream-text');
       txt.textContent += data.text;
     }
 
+    // Auto-scroll timeline to keep streaming card visible
     timeline.scrollTop = timeline.scrollHeight;
   }
 
   function finalizeStreamCard(speaker, turn) {
+    // Remove specific streaming card
     var key = speaker + '-' + turn;
     var card = activeStreamCards[key];
     if (card) {
       card.remove();
       delete activeStreamCards[key];
     }
+    // Also remove any card matching just the speaker (for closing statements with turn=-1)
+    Object.keys(activeStreamCards).forEach(function(k) {
+      if (k.startsWith(speaker + '-')) {
+        activeStreamCards[k].remove();
+        delete activeStreamCards[k];
+      }
+    });
+  }
+
+  function finalizeAllStreamCards() {
+    // Remove ALL streaming cards (safety cleanup)
+    Object.keys(activeStreamCards).forEach(function(k) {
+      activeStreamCards[k].remove();
+      delete activeStreamCards[k];
+    });
+  }
+
+  // ── Download button ──
+  function addDownloadButton(data) {
+    var card = document.createElement('div');
+    card.className = 'card card-facilitator';
+    var btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = 'Download Report (.md)';
+    btn.addEventListener('click', function() {
+      var blob = new Blob([data.report], {type: 'text/markdown; charset=utf-8'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'magi2-report.md';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    card.appendChild(btn);
+    timeline.appendChild(card);
   }
 
   // Simple Markdown to HTML (XSS-safe: escapes first, then applies formatting)
