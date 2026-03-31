@@ -167,6 +167,14 @@
 
       case 'config':
         statusEl.textContent = 'Ready — ' + data.topic.substring(0, 60) + '...';
+        if (data.show_thoughts) {
+          showThoughts = true;
+          document.getElementById('toggle-thoughts').checked = true;
+        }
+        if (data.show_facilitator) {
+          showFacilitator = true;
+          document.getElementById('toggle-facilitator').checked = true;
+        }
         break;
 
       case 'topic_analyzed':

@@ -31,6 +31,7 @@ def run_discussion(
     attachment_paths: list[str] | None = None,
     max_turns: int = DEFAULT_MAX_TURNS,
     on_event: EventCallback | None = None,
+    lang: str = "",
 ) -> DiscussionState:
     """Run a complete multi-persona discussion.
 
@@ -49,7 +50,7 @@ def run_discussion(
 
     # ── Phase 0: Topic analysis & persona design ──
     emit("activity", {"who": "Facilitator", "what": "Analyzing topic and designing personas..."})
-    analysis, in_tok, out_tok = analyze_topic(topic_text, attachment_paths)
+    analysis, in_tok, out_tok = analyze_topic(topic_text, attachment_paths, lang=lang)
 
     state = DiscussionState(
         topic_analysis=analysis,
@@ -76,7 +77,7 @@ def run_discussion(
     while state.turn < max_turns and not state.is_converged:
         # Step 1: Facilitator decides next action
         emit("activity", {"who": "Facilitator", "what": "Deciding next speaker..."})
-        action, in_tok, out_tok = decide_next_action(state, max_turns)
+        action, in_tok, out_tok = decide_next_action(state, max_turns, lang=lang)
         state.token_usage.add_flash(in_tok, out_tok)
         state.facilitator_actions.append(action)
         state.phase = action.discussion_status
@@ -118,6 +119,7 @@ def run_discussion(
             state=state,
             facilitator_instruction=action.instruction,
             on_chunk=_on_chunk,
+            lang=lang,
         )
         state.token_usage.add_pro(in_tok, out_tok)
 
@@ -182,6 +184,92 @@ def run_discussion(
         )
 
         # Check convergence conditions
+        convergence_possible = (
+            state.turn >= MIN_TURNS_BEFORE_CONVERGENCE
+            and action.convergence_assessment >= CONVERGENCE_THRESHOLD
+            and avg_readiness >= PERSONA_READINESS_AVG
+        )
+
+        if convergence_possible and min_readiness < PERSONA_READINESS_MIN:
+            # Some personas haven't reached threshold — ask them before closing
+            low_personas = [
+                name for name, r in persona_readiness.items()
+                if r < PERSONA_READINESS_MIN
+            ]
+            log("CONV", f"Near-convergence but {low_personas} below threshold. Prompting final check.")
+
+            for lp_name in low_personas:
+                if lp_name not in persona_map or state.turn >= max_turns:
+                    break
+
+                # Facilitator asks the low-readiness persona directly
+                check_msg = (
+                    f"The discussion is nearing consensus, but {lp_name} has not yet "
+                    f"fully expressed agreement. {lp_name}, do you have remaining "
+                    f"concerns? What would you need to see to reach agreement?"
+                )
+                if lang:
+                    check_msg = (
+                        f"議論は合意に近づいていますが、{lp_name}はまだ完全には同意を示していません。"
+                        f"{lp_name}、残っている懸念はありますか？合意に至るために何が必要ですか？"
+                    )
+
+                fac_check = Message(
+                    turn=state.turn,
+                    speaker="facilitator",
+                    role="facilitator",
+                    content=check_msg,
+                )
+                state.messages.append(fac_check)
+                emit("facilitator_intervention", {
+                    "content": check_msg,
+                    "phase": "consensus check",
+                })
+
+                lp_design = persona_map[lp_name]
+                emit("activity", {"who": lp_name, "what": "Responding to consensus check..."})
+                lp_response, lp_in, lp_out = generate_response(
+                    design=lp_design,
+                    state=state,
+                    facilitator_instruction="The facilitator is asking if you have remaining concerns before the group reaches consensus. Be honest.",
+                    lang=lang,
+                )
+                state.token_usage.add_pro(lp_in, lp_out)
+                state.inner_thoughts[lp_name].append(lp_response.inner_thoughts)
+
+                lp_msg = Message(
+                    turn=state.turn,
+                    speaker=lp_name,
+                    role="persona",
+                    content=lp_response.statement,
+                )
+                state.messages.append(lp_msg)
+                state.turn += 1
+
+                emit("persona_turn", {
+                    "speaker": lp_name,
+                    "archetype": lp_design.archetype,
+                    "statement": lp_response.statement,
+                    "key_points": lp_response.key_points,
+                    "inner_thoughts": lp_response.inner_thoughts.model_dump(),
+                    "readiness_to_converge": lp_response.readiness_to_converge,
+                    "stance_evolution": lp_response.stance_evolution,
+                    "turn": state.turn,
+                    "phase": "consensus check",
+                    "token_usage": {
+                        "pro": state.token_usage.pro_total,
+                        "flash": state.token_usage.flash_total,
+                        "total": state.token_usage.total,
+                    },
+                })
+
+                # Update their readiness
+                persona_readiness[lp_name] = lp_response.readiness_to_converge
+
+            # Recalculate
+            avg_readiness = sum(persona_readiness.values()) / len(persona_readiness)
+            min_readiness = min(persona_readiness.values())
+
         if (
             state.turn >= MIN_TURNS_BEFORE_CONVERGENCE
             and action.convergence_assessment >= CONVERGENCE_THRESHOLD
@@ -221,6 +309,7 @@ def run_discussion(
             design=persona,
             state=state,
             facilitator_instruction=closing_instruction,
+            lang=lang,
         )
         state.token_usage.add_pro(in_tok, out_tok)
         state.inner_thoughts[persona.name].append(response.inner_thoughts)
@@ -243,7 +332,7 @@ def run_discussion(
 
     # ── Phase 3: Synthesis ──
     emit("activity", {"who": "Facilitator", "what": "Writing synthesis report..."})
-    report, in_tok, out_tok = synthesize_report(state)
+    report, in_tok, out_tok = synthesize_report(state, lang=lang)
     state.token_usage.add_pro(in_tok, out_tok)
 
     # Store report as a facilitator message

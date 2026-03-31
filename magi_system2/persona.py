@@ -81,6 +81,7 @@ def generate_response(
     state: DiscussionState,
     facilitator_instruction: str,
     on_chunk: StreamCallback | None = None,
+    lang: str = "",
 ) -> tuple[PersonaResponse, int, int]:
     """Generate a persona's response to the current discussion state.
 
@@ -117,6 +118,9 @@ def generate_response(
             )
 
     user_content = ["\n".join(parts)]
+
+    if lang:
+        system_prompt += f"\n\nLANGUAGE: Write the 'statement', 'key_points', 'stance_evolution', and 'convergence_conditions' fields in {lang}. Inner thoughts can be in any language."
 
     log("TURN", f"#{state.turn + 1} Speaker: {design.name}...")
     result, in_tok, out_tok = generate_structured_stream(

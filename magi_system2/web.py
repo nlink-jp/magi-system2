@@ -159,6 +159,7 @@ def _run_discussion_thread() -> None:
         attachment_paths=config["attachment_paths"],
         max_turns=config["max_turns"],
         on_event=on_event,
+        lang=config.get("lang", ""),
     )
 
     # Auto-save if requested
