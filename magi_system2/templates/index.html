@@ -50,6 +50,10 @@
   <span class="convergence-value" id="convergence-value">0.00</span>
   <span class="phase-label" id="phase-label">—</span>
   <span class="turn-label" id="turn-label">Turn 0</span>
+  <span class="token-divider">|</span>
+  <span class="token-label">Pro <span id="token-pro">0</span></span>
+  <span class="token-label">Flash <span id="token-flash">0</span></span>
+  <span class="token-label token-total">Total <span id="token-total">0</span></span>
 </div>
 
 <script>
@@ -132,6 +136,16 @@
     };
   }
 
+  var tokenPro = document.getElementById('token-pro');
+  var tokenFlash = document.getElementById('token-flash');
+  var tokenTotal = document.getElementById('token-total');
+
+  function updateTokens(usage) {
+    tokenPro.textContent = (usage.pro || 0).toLocaleString();
+    tokenFlash.textContent = (usage.flash || 0).toLocaleString();
+    tokenTotal.textContent = (usage.total || 0).toLocaleString();
+  }
+
   function showActivity(who, what) {
     activityWho.textContent = who;
     activityWhat.textContent = what;
@@ -168,6 +182,7 @@
         updatePersonaPanel(data.speaker, data);
         turnLabel.textContent = 'Turn ' + data.turn;
         phaseLabel.textContent = data.phase;
+        if (data.token_usage) updateTokens(data.token_usage);
         break;
 
       case 'facilitator_intervention':
@@ -198,6 +213,7 @@
         addTimelineCard('facilitator', 'Synthesis Report', data.report);
         statusEl.textContent = 'Complete — ' + data.turns + ' turns';
         document.getElementById('btn-start').textContent = 'Complete';
+        if (data.token_usage) updateTokens(data.token_usage);
         turnLabel.textContent = 'Turn ' + data.turns;
         break;
     }

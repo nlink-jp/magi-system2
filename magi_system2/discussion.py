@@ -134,6 +134,11 @@ def run_discussion(
             "stance_evolution": response.stance_evolution,
             "turn": state.turn,
             "phase": state.phase,
+            "token_usage": {
+                "pro": state.token_usage.pro_total,
+                "flash": state.token_usage.flash_total,
+                "total": state.token_usage.total,
+            },
         })
 
         # Step 6: Update convergence tracking
