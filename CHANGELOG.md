@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0] - 2026-04-01
+
+### Added
+- Auto-save discussion state JSON (`magi2_YYYYMMDD_HHMMSS.json`) on completion
+- Markdown report now includes full 議事録 (minutes):
+  - All inner thoughts per turn (honest reaction, doubts, suppressed opinions, strategic thinking, emotional state, assessment of others)
+  - Facilitator Analysis Log (hidden dynamics, strategic intent per action)
+  - Convergence History table (per-turn facilitator + persona readiness)
+  - Token usage metadata footer
+- `--output` directory option for state file output location
+
 ## [0.1.0] - 2026-04-01
 
 ### Added
