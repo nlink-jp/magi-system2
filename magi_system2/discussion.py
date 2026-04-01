@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Callable
+from typing import Callable
 
 from magi_system2.console import log, log_token_summary
 from magi_system2.facilitator import analyze_topic, decide_next_action, synthesize_report
@@ -27,6 +28,9 @@ PERSONA_READINESS_MIN = 0.5
 EventCallback = Callable[[str, dict], None]
 
 
+CancelCheck = Callable[[], bool]
+
+
 def run_discussion(
     topic_text: str,
     attachment_paths: list[str] | None = None,
@@ -34,6 +38,7 @@ def run_discussion(
     on_event: EventCallback | None = None,
     lang: str = "",
     output_dir: str = "",
+    is_cancelled: CancelCheck | None = None,
 ) -> DiscussionState:
     """Run a complete multi-persona discussion.
 
@@ -77,6 +82,21 @@ def run_discussion(
     log("INIT", f"Discussion starting: {len(analysis.personas)} personas, max {max_turns} turns")
 
     while state.turn < max_turns and not state.is_converged:
+        # Check for cancellation
+        if is_cancelled and is_cancelled():
+            log("CONV", "Discussion cancelled by user.")
+            state.phase = "cancelled"
+            emit("discussion_complete", {
+                "report": "(Discussion was cancelled before completion.)",
+                "turns": state.turn,
+                "converged": False,
+                "token_usage": state.token_usage.model_dump(),
+            })
+            state.ended_at = datetime.now()
+            save_dir = output_dir or "."
+            save_state(state, save_dir)
+            return state
+
         # Step 1: Facilitator decides next action
         emit("activity", {"who": "Facilitator", "what": "Deciding next speaker..."})
         action, in_tok, out_tok = decide_next_action(state, max_turns, lang=lang)

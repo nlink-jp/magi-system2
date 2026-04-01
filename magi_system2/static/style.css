@@ -120,6 +120,11 @@ nav {
 .btn-icon:hover { border-color: var(--accent); color: var(--text); }
 
 .btn-start { padding: 7px 20px; border-radius: 10px; font-size: 13px; }
+.btn-stop {
+  padding: 7px 16px; border-radius: 10px; font-size: 13px;
+  background: var(--danger); color: white;
+}
+.btn-stop:hover { opacity: 0.88; }
 
 /* Main layout */
 .main {

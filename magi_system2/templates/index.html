@@ -26,6 +26,7 @@
     <div class="nav-actions">
       <button class="btn-icon" id="btn-theme" title="Toggle theme">☀</button>
       <button class="btn btn-start" id="btn-start">▶ Start</button>
+      <button class="btn btn-stop" id="btn-stop" style="display:none;" title="Stop discussion">■ Stop</button>
     </div>
   </div>
 </nav>
@@ -115,12 +116,23 @@
     }
   })();
 
+  var stopBtn = document.getElementById('btn-stop');
+
   document.getElementById('btn-start').addEventListener('click', function() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({action: 'start'}));
       this.disabled = true;
       this.textContent = 'Running...';
+      stopBtn.style.display = 'inline-block';
       emptyState.style.display = 'none';
+    }
+  });
+
+  stopBtn.addEventListener('click', function() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({action: 'stop'}));
+      this.disabled = true;
+      this.textContent = 'Stopping...';
     }
   });
 
@@ -189,11 +201,13 @@
         if (data.discussion_started) {
           startBtn.disabled = true;
           emptyState.style.display = 'none';
-          if (data.discussion_phase === 'completed') {
+          if (data.discussion_phase === 'completed' || data.discussion_phase === 'cancelled') {
             startBtn.textContent = 'Complete';
+            stopBtn.style.display = 'none';
             statusEl.textContent = 'Complete — ' + data.topic.substring(0, 60) + '...';
           } else {
             startBtn.textContent = 'Running...';
+            stopBtn.style.display = 'inline-block';
             statusEl.textContent = 'In progress — ' + data.topic.substring(0, 60) + '...';
           }
         } else {
@@ -253,6 +267,7 @@
         addDownloadButton(data);
         statusEl.textContent = 'Complete — ' + data.turns + ' turns';
         document.getElementById('btn-start').textContent = 'Complete';
+        stopBtn.style.display = 'none';
         if (data.token_usage) updateTokens(data.token_usage);
         turnLabel.textContent = 'Turn ' + data.turns;
         break;

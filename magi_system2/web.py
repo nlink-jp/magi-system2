@@ -25,6 +25,7 @@ _clients: list[WebSocket] = []
 _state: DiscussionState | None = None
 _discussion_config: dict[str, Any] = {}
 _event_loop: asyncio.AbstractEventLoop | None = None
+_cancel_requested: bool = False
 
 
 async def _broadcast(event_type: str, data: dict) -> None:
@@ -95,7 +96,7 @@ def create_app(
 
     @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket):
-        global _event_loop
+        global _event_loop, _cancel_requested
         await ws.accept()
         _clients.append(ws)
         _event_loop = asyncio.get_running_loop()
@@ -107,8 +108,12 @@ def create_app(
                 msg = json.loads(data)
 
                 if msg.get("action") == "start":
+                    _cancel_requested = False
                     log("WEB", "Discussion start requested")
                     _event_loop.run_in_executor(None, _run_discussion_thread)
+                elif msg.get("action") == "stop":
+                    _cancel_requested = True
+                    log("WEB", "Discussion stop requested")
                 elif msg.get("action") == "get_config":
                     # Include discussion progress state for UI recovery on reload
                     discussion_started = _state is not None
@@ -167,6 +172,7 @@ def _run_discussion_thread() -> None:
             on_event=on_event,
             lang=config.get("lang", ""),
             output_dir=config.get("output_dir", ""),
+            is_cancelled=lambda: _cancel_requested,
         )
     except Exception as e:
         log("ERR", f"Discussion failed: {e}", level="error")
