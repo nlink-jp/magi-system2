@@ -52,13 +52,40 @@ magi2 discuss --file proposal.md --attach spec.pdf --attach diagram.png
 # 言語・表示オプション
 magi2 discuss --file topic.md --lang ja --show-thoughts
 
-# リプレイ（LLM 不要）
-magi2 replay --state discussion.json
+# 出力ディレクトリ指定
+magi2 discuss "トピック" --output ./results
 
-# エクスポート
-magi2 export --state discussion.json --markdown
-magi2 export --state discussion.json --html --lang ja --show-thoughts
+# リプレイ（LLM 不要）
+magi2 replay --state magi2_20260401_030000.json
+
+# レポート＋議事録エクスポート
+magi2 export --state magi2_20260401_030000.json --markdown
+magi2 export --state magi2_20260401_030000.json --html --lang ja
+
+# 別言語でレンダリング
+magi2 render --state magi2_20260401_030000.json --lang ko
 ```
+
+## 出力
+
+議論完了時に JSON 状態ファイル（`magi2_YYYYMMDD_HHMMSS.json`）が自動保存されます。
+
+- **リプレイ** — `magi2 replay --state file.json`（LLM 不要）
+- **エクスポート** — レポート＋議事録（全内心情報付き）
+- **再レンダリング** — 別言語でレポート生成
+
+### Markdown レポート内容
+
+| セクション | 内容 |
+|-----------|------|
+| Participants | ペルソナ設計（名前、背景、価値観、初期立場） |
+| Discussion | 全会話ログ＋各ターンの内心 |
+| Inner Thoughts | 本音、疑念、抑制意見、戦略思考、感情、他者評価 |
+| Synthesis | LLM 生成の統合レポート |
+| Final Positions | 各ペルソナの最終 readiness と立場 |
+| Facilitator Analysis | 隠れたダイナミクス、戦略的意図 |
+| Convergence History | ターン毎の収束推移テーブル |
+| Metadata | Pro/Flash/Total トークン数 |
 
 ## Web UI
 

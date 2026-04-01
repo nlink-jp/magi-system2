@@ -76,16 +76,41 @@ magi2 discuss --file topic.md --lang ja --show-thoughts
 # Control
 magi2 discuss "Topic" --max-turns 20 --port 8081
 
-# Replay saved discussion (no LLM needed)
-magi2 replay --state discussion.json
+# Save to specific directory
+magi2 discuss "Topic" --output ./results
 
-# Export
-magi2 export --state discussion.json --markdown
-magi2 export --state discussion.json --html --lang ja --show-thoughts
+# Replay saved discussion (no LLM needed)
+magi2 replay --state magi2_20260401_030000.json
+
+# Export report + minutes (議事録)
+magi2 export --state magi2_20260401_030000.json --markdown
+magi2 export --state magi2_20260401_030000.json --html --lang ja
 
 # Re-render in another language
-magi2 render --state discussion.json --lang ko
+magi2 render --state magi2_20260401_030000.json --lang ko
 ```
+
+## Output
+
+Every discussion automatically saves a JSON state file (`magi2_YYYYMMDD_HHMMSS.json`).
+This file contains the complete discussion state and can be used for:
+
+- **Replay** — `magi2 replay --state file.json` (no LLM needed)
+- **Export** — Markdown report + 議事録 (minutes) with full inner thoughts
+- **Re-render** — Generate reports in other languages
+
+### Markdown Report Contents
+
+| Section | Contents |
+|---------|----------|
+| Participants | Name, archetype, background, values, initial stance |
+| Discussion | Full conversation log with all inner thoughts per turn |
+| Inner Thoughts | Honest reaction, doubts, suppressed opinions, strategic thinking, emotional state, assessment of others |
+| Synthesis | LLM-generated synthesis report |
+| Final Positions | Per-persona readiness and final stance |
+| Facilitator Analysis Log | Hidden dynamics, strategic intent per action |
+| Convergence History | Turn-by-turn facilitator assessment + persona readiness table |
+| Metadata | Pro/Flash/Total token counts |
 
 ## Web UI
 

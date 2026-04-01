@@ -66,10 +66,16 @@ reads the full conversation + inner thoughts and decides flow adaptively.
 | `discuss "topic"` | Start discussion with Web UI |
 | `discuss --file topic.md --attach spec.pdf` | Multimodal input |
 | `discuss --lang ja --show-thoughts` | Japanese mode with thought bubbles |
+| `discuss "topic" --output ./results` | Save to specific directory |
 | `replay --state file.json` | Replay saved discussion (no LLM) |
-| `export --state file.json --markdown` | Export as Markdown |
+| `export --state file.json --markdown` | Export report + 議事録 (full inner thoughts, facilitator analysis) |
 | `export --state file.json --html` | Export as static HTML |
 | `render --state file.json --lang ko` | Re-render in another language |
+
+### Auto-saved State
+
+Every discussion saves `magi2_YYYYMMDD_HHMMSS.json` on completion.
+Contains full state: messages, inner thoughts, facilitator actions, convergence history, token usage.
 
 ## Development
 
