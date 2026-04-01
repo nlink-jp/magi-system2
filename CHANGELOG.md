@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1] - 2026-04-01
+
+### Added
+- Stop button (■) to cancel discussion from Web UI
+- Cancelled discussions save state and emit completion event
+
+### Fixed
+- UI state restored correctly on page reload during discussion
+- Button, checkbox, and status bar reflect current discussion progress
+- Error logging in discussion thread (no longer silently swallowed)
+
 ## [0.2.0] - 2026-04-01
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "magi-system2"
-version = "0.2.0"
+version = "0.2.1"
 description = "Multi-persona AI discussion system with dynamic persona generation and adaptive facilitation"
 requires-python = ">=3.11"
 dependencies = [
