@@ -160,12 +160,8 @@ def _run_discussion_thread() -> None:
         max_turns=config["max_turns"],
         on_event=on_event,
         lang=config.get("lang", ""),
+        output_dir=config.get("output_dir", ""),
     )
-
-    # Auto-save if requested
-    if config.get("save") and config.get("output_dir"):
-        path = save_state(_state, config["output_dir"])
-        log("SAVE", f"State saved to {path}")
 
 
 def _replay_from_state() -> None:

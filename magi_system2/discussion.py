@@ -7,6 +7,7 @@ from typing import Callable
 
 from magi_system2.console import log, log_token_summary
 from magi_system2.facilitator import analyze_topic, decide_next_action, synthesize_report
+from magi_system2.save import save_state
 from magi_system2.models import (
     ConvergenceSnapshot,
     DiscussionState,
@@ -32,6 +33,7 @@ def run_discussion(
     max_turns: int = DEFAULT_MAX_TURNS,
     on_event: EventCallback | None = None,
     lang: str = "",
+    output_dir: str = "",
 ) -> DiscussionState:
     """Run a complete multi-persona discussion.
 
@@ -409,5 +411,10 @@ def run_discussion(
         state.token_usage.flash_input,
         state.token_usage.flash_output,
     )
+
+    # Auto-save state JSON
+    save_dir = output_dir or "."
+    state_path = save_state(state, save_dir)
+    log("SAVE", f"State saved to {state_path}")
 
     return state
