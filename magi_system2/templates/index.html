@@ -176,7 +176,6 @@
         break;
 
       case 'config':
-        statusEl.textContent = 'Ready — ' + data.topic.substring(0, 60) + '...';
         if (data.show_thoughts) {
           showThoughts = true;
           document.getElementById('toggle-thoughts').checked = true;
@@ -184,6 +183,21 @@
         if (data.show_facilitator) {
           showFacilitator = true;
           document.getElementById('toggle-facilitator').checked = true;
+        }
+        // Recover UI state based on discussion progress
+        var startBtn = document.getElementById('btn-start');
+        if (data.discussion_started) {
+          startBtn.disabled = true;
+          emptyState.style.display = 'none';
+          if (data.discussion_phase === 'completed') {
+            startBtn.textContent = 'Complete';
+            statusEl.textContent = 'Complete — ' + data.topic.substring(0, 60) + '...';
+          } else {
+            startBtn.textContent = 'Running...';
+            statusEl.textContent = 'In progress — ' + data.topic.substring(0, 60) + '...';
+          }
+        } else {
+          statusEl.textContent = 'Ready — ' + data.topic.substring(0, 60) + '...';
         }
         break;
 

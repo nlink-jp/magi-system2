@@ -110,6 +110,9 @@ def create_app(
                     log("WEB", "Discussion start requested")
                     _event_loop.run_in_executor(None, _run_discussion_thread)
                 elif msg.get("action") == "get_config":
+                    # Include discussion progress state for UI recovery on reload
+                    discussion_started = _state is not None
+                    discussion_phase = _state.phase if _state else "not_started"
                     await ws.send_text(json.dumps({
                         "type": "config",
                         "data": {
@@ -119,6 +122,8 @@ def create_app(
                             "show_thoughts": _discussion_config.get("show_thoughts", False),
                             "show_facilitator": _discussion_config.get("show_facilitator", False),
                             "replay_mode": _discussion_config.get("replay_mode", False),
+                            "discussion_started": discussion_started,
+                            "discussion_phase": discussion_phase,
                         },
                     }))
 
@@ -154,14 +159,20 @@ def _run_discussion_thread() -> None:
         except Exception as e:
             log("ERR", f"Broadcast failed: {e}", level="warn")
 
-    _state = run_discussion(
-        topic_text=config["topic_text"],
-        attachment_paths=config["attachment_paths"],
-        max_turns=config["max_turns"],
-        on_event=on_event,
-        lang=config.get("lang", ""),
-        output_dir=config.get("output_dir", ""),
-    )
+    try:
+        _state = run_discussion(
+            topic_text=config["topic_text"],
+            attachment_paths=config["attachment_paths"],
+            max_turns=config["max_turns"],
+            on_event=on_event,
+            lang=config.get("lang", ""),
+            output_dir=config.get("output_dir", ""),
+        )
+    except Exception as e:
+        log("ERR", f"Discussion failed: {e}", level="error")
+        import traceback
+        traceback.print_exc()
+        on_event("error", {"message": str(e)})
 
 
 def _replay_from_state() -> None:
