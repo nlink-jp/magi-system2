@@ -1,5 +1,8 @@
 # magi-system2
 
+> **Archived (2026-07-31)** — no longer used or maintained. Kept public
+> for reference.
+
 Multi-persona AI discussion system with dynamic persona generation, dual memory, and adaptive facilitation — powered by Vertex AI Gemini.
 
 [日本語版 README はこちら](README.ja.md)
